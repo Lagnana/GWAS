@@ -1,0 +1,138 @@
+---
+title: "Régression sur les Composantes Principales "
+author: "L@gn@n@"
+date: "24 août 2023"
+output:
+  html_notebook: default
+  word_document: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+```{r}
+ls()
+rm(list = ls())
+
+```
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+##Chargement des packages
+```{r eval=FALSE}
+library(FactoMineR)
+library(factoextra)
+#library(FactoInvestigate)
+library(Factoshiny)
+library(readxl)
+library(MASS)
+```
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## Importation du jeu de données
+```{r eval=FALSE}
+malariagen <- read_excel("E:/Gwas_Docs_Maryam/Statistique Génétique/Rapport de stage/imp/M_G.xlsx")
+
+#head(malariagen)
+mal_gen = malariagen[,c(1,2,5,3,6,7)]
+
+
+data <- read.csv("E:/Gwas_Docs_Maryam/code_R/data_frame_snps.csv")
+A= data[-c(393:ncol(data)),]
+data.1 = A[ , 7:ncol(A)]
+#data_na=data.1[is.na(data.1)];data_na
+
+data.3 = cbind(mal_gen,data.1)
+D=data.3[,-c(1,2,3,4,6)]
+```
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## Analyse en composante principale sur les SNP
+```{r}
+# ACP
+#ress = Factoshiny(D)
+res=PCA(D)
+
+# Pourcentage de variances expliquées
+fviz_eig(res, addlabels = TRUE, ylim=c(0,3.5), main = "% Variances expliquées en fonction des dimensions ")
+
+# Coordonnées des individus
+cord=get_pca_ind(res)
+
+# Les 5 premières composantes principales
+CP = data.frame(cord$coord); CP 
+
+```
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## Regression sur les composantes principales
+```{r}
+# Combiner les variables et la table CP
+data_r = cbind(data.3[,5],data.3[,2],data.3[,3],data.3[,4],CP)
+
+# Renommer les variables
+data.names = c("pfaid", "Sexe", "Village", "Age", "PC1","PC2",
+                  "PC3", "PC4", "PC5")
+
+names(data_r)=data.names 
+head(data_r,4)
+
+# Division de la base en train et test
+set.seed(10)  #pour avoir les meme individus
+sample=sample.int(n=nrow(data_r),size=floor(.80*nrow(data_r)),replace=F)
+train = data_r[sample,]
+test = data_r[-sample,]
+
+# Phase d'entrainement
+
+# Modele lineaire généralisé
+mod_glm = glm(train$pfaid ~ ., data = train[,-1])
+
+# Résumé du modèle
+summary(mod_glm)
+
+# Visualisation du modèle
+par(mfrow = c(2, 2))
+plot(mod_glm)
+```
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## Sélection de variables
+```{r}
+# Stepwise regression model
+step.model <- stepAIC(mod_glm, direction = "both", 
+                      trace = FALSE)
+# Résumé du modèle avec stepwise
+print(summary(step.model))
+
+### Modèle actuel
+mod_glm_new = glm(train$pfaid ~ . , data = train[,-c(1, 7, 9)])
+
+# Résumé du nouveau modèle
+print(summary(mod_glm_new))
+
+# Visualisation du modèle
+par(mfrow = c(2, 2))
+plot(mod_glm_new )
+```
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## Phase test
+```{r}
+# Modèle test
+mod_test = glm(test$pfaid ~ . , data = test[,-c(1,7,9)])
+
+# Résumé du modèle test
+summary(mod_test)
+
+# Prédiction de la variable pfaid
+pfaid_predict = mod_test$fitted.values
+head(pfaid_predict)
+
+# Densité de Kernel
+hist(pfaid_predict, xlab = "valeurs predictes de pfaid", ylab = "Densité", breaks = 13, freq = FALSE)
+densite = density(pfaid_predict)
+lines(densite, col="red")
+```
+
