@@ -1,0 +1,119 @@
+---
+title: "Statistique Descriptive et Univariée"
+author: "L@gn@n@"
+date: "24 août 2023"
+output: pdf_document
+---
+
+
+```{r}
+ls()
+rm(list = ls())
+
+```
+
+
+#Chargement des packages
+```{r eval=FALSE}
+library(readxl)
+#library(arsenal)#table_fit
+library(finalfit)#model_fit
+library(tidyverse)
+library(caret)
+library(leaps)
+library(MASS)
+library(kableExtra)
+```
+
+
+# Importation du jeu de données
+```{r eval=FALSE}
+malariagen <- read_excel("E:/Gwas_Docs_Maryam/Statistique Génétique/Rapport de stage/imp/M_G.xlsx")
+head(malariagen)
+mal_gen = malariagen[,c(1,2,5,3,6,7)]; mal_gen
+```
+
+
+```{r echo=FALSE}
+data <- read.csv("E:/Gwas_Docs_Maryam/code_R/data_frame_snps.csv")
+
+A= data[-c(393:ncol(data)),]
+data.1 = A[ , 7:ncol(A)]
+#data_na=data.1[is.na(data.1)];data_na
+
+data.3 = cbind(mal_gen,data.1)
+D=data.3[,-c(1,2,3,4,6)]
+dim(D)
+```
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## Analyse descriptive de la variable pfaid
+```{r}
+boxplot(data.3$pfaid~ data.3$class + data.3$Village, col = "blue", main = "Boxplox pfaid en fonction de class et Village", ylab = "pfaid")
+hist(data.3$pfaid,col="blue", main = "Histogram of pfaid", xlab = "pfaid", xlim = c(-3,4), ylim = c(0,120))
+```
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+##Calcul de fréquence de la variable class
+```{r}
+effectif=table(data.3$class)
+frequence=prop.table(effectif)
+data.frame(frequence)
+barplot(frequence,xlab = "Frequency of class", col = "blue")
+```
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+##Fréquence des alleles des SNP
+```{r}
+coltodelete = NULL
+D_1 = D[,-1]
+for (i in 1:ncol(D_1)){
+  if(length(unique(D_1[,i])) == 1 || !(0 %in% unique(D_1[,i]))){
+    coltodelete = c(coltodelete, i)}else{
+      freq=round(prop.table(table(D_1[,i]))*100)
+      z=freq["0"][[1]]
+      if(z>=80){coltodelete = c(coltodelete, i)}
+    }
+}
+    
+D_2= D_1[,-coltodelete]  
+
+L = data.frame(SNP = NA, Freq0 = NA,Freq1 = NA,Freq2 = NA)
+for (i in 1:ncol(D_2)) {
+  L[i,] = NA
+  ff = round(prop.table(table(D_2[,i]))*100)
+  L$SNP[i] = names(D_2)[i]
+  L$Freq0[i] = ff["0"]
+  L$Freq1[i] = ff["1"]
+  L$Freq2[i] = ff["2"]
+}
+
+ff
+plot(L)
+```
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+##Analyse univariée et multivariée 
+```{r ,results='asis'}
+class_dat <- read.csv2("E:/MEMR/lagnana_gwas/dielmo_ndiop/simulation/simulation/Print/class_dat.csv")
+ class_dat$class = as.factor(class_dat$class)
+ 
+#library(kableExtra)
+ 
+dep <- "class"
+
+vars <- c("Sexe", "Village", "Age_inclusion")
+
+multi <- c("Sexe", "Village", "Age_inclusion")
+
+tab  <- finalfit.glm(class_dat, dependent = dep, explanatory = vars, explanatory_multi = multi)
+#tab = tab[,1:4]
+kable(tab, row.names = FALSE, format = "pandoc", table.attr = "style='width:30%;'") %>%
+  kableExtra::kable_styling( ) #font_size = 15
+
+```
+
+
+
