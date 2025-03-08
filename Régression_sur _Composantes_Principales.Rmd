@@ -32,13 +32,13 @@ library(MASS)
 
 ## Importation du jeu de données
 ```{r eval=FALSE}
-malariagen <- read_excel("E:/Gwas_Docs_Maryam/Statistique Génétique/Rapport de stage/imp/M_G.xlsx")
+malariagen <- read_excel("M_G.xlsx")
 
 #head(malariagen)
 mal_gen = malariagen[,c(1,2,5,3,6,7)]
 
 
-data <- read.csv("E:/Gwas_Docs_Maryam/code_R/data_frame_snps.csv")
+data <- read.csv("data_frame_snps.csv")
 A= data[-c(393:ncol(data)),]
 data.1 = A[ , 7:ncol(A)]
 #data_na=data.1[is.na(data.1)];data_na
